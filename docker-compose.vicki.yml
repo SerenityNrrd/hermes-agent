@@ -57,7 +57,7 @@ services:
     restart: unless-stopped
     depends_on:
       - vicki
-    entrypoint: ["/opt/hermes/.venv/bin/python", "-m", "hermes_cli"]
+    entrypoint: ["/opt/hermes/.venv/bin/hermes"]
     volumes:
       - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
     environment:

@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     depends_on:
       - zora
-    entrypoint: ["/opt/hermes/.venv/bin/python", "-m", "hermes_cli"]
+    entrypoint: ["/opt/hermes/.venv/bin/hermes"]
     volumes:
       - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
     environment:
