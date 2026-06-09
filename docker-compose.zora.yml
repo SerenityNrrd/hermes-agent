@@ -17,6 +17,8 @@ services:
     image: hermes-zora:latest
     container_name: zora-agent
     restart: unless-stopped
+    ports:
+      - "${ZORA_API_PORT:-8645}:8642"
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
@@ -41,13 +43,13 @@ services:
         limits:
           memory: 8G
           cpus: "4"
-    ports:
-      - "${ZORA_API_PORT:-8645}:8642"
 
   zora-dashboard:
     image: hermes-zora:latest
     container_name: zora-dashboard
     restart: unless-stopped
+    ports:
+      - "9120:9119"
     depends_on:
       - zora
     entrypoint: ["/opt/hermes/.venv/bin/hermes"]
@@ -59,5 +61,8 @@ services:
       - HERMES_HOME=/opt/data
       - HERMES_DASHBOARD_INSECURE=1
     command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
-    ports:
-      - "${ZORA_DASHBOARD_PORT:-9120}:9119"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
