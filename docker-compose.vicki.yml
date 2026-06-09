@@ -30,6 +30,7 @@ services:
       - API_SERVER_KEY=${API_SERVER_KEY:-}
       - API_SERVER_CORS_ORIGINS=${API_SERVER_CORS_ORIGINS:-*}
       - GATEWAY_ALLOW_ALL_USERS=${GATEWAY_ALLOW_ALL_USERS:-false}
+      - HERMES_DASHBOARD_INSECURE=1
       # MS Teams — fill in .env or set here
       - TEAMS_CLIENT_ID=${TEAMS_CLIENT_ID:-}
       - TEAMS_CLIENT_SECRET=${TEAMS_CLIENT_SECRET:-}
@@ -62,6 +63,7 @@ services:
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
-    command: ["dashboard", "--host", "0.0.0.0", "--no-open"]
+      - HERMES_DASHBOARD_INSECURE=1
+    command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
     ports:
       - "${VICKI_DASHBOARD_PORT:-8788}:9119"
