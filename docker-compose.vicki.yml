@@ -25,8 +25,6 @@ services:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
-      - HERMES_DASHBOARD=1
-      - HERMES_DASHBOARD_INSECURE=1
       - API_SERVER_ENABLED=${API_SERVER_ENABLED:-true}
       - API_SERVER_HOST=${API_SERVER_HOST:-0.0.0.0}
       - API_SERVER_KEY=${API_SERVER_KEY:-}
@@ -51,5 +49,18 @@ services:
           cpus: "4"
     ports:
       - "${VICKI_API_PORT:-8642}:8642"
-      - "${VICKI_DASHBOARD_PORT:-8788}:9119"
       - "${VICKI_TEAMS_PORT:-3978}:3978"
+
+  vicki-dashboard:
+    image: hermes-vicki:latest
+    container_name: vicki-dashboard
+    restart: unless-stopped
+    depends_on:
+      - vicki
+    entrypoint: ["/opt/hermes/.venv/bin/python", "-m", "hermes_cli"]
+    environment:
+      - HERMES_HOME=/tmp/hermes-dashboard
+      - HERMES_DASHBOARD_INSECURE=1
+    command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
+    ports:
+      - "${VICKI_DASHBOARD_PORT:-8788}:9119"
