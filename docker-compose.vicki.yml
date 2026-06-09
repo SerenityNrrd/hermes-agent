@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
     ports:
       - "8646:8642"
-      - "${VICKI_TEAMS_PORT:-3978}:3978"
+      - "3978:3978"
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
@@ -33,11 +33,6 @@ services:
       - API_SERVER_KEY=${API_SERVER_KEY:-}
       - API_SERVER_CORS_ORIGINS=${API_SERVER_CORS_ORIGINS:-*}
       - GATEWAY_ALLOW_ALL_USERS=${GATEWAY_ALLOW_ALL_USERS:-false}
-      - TEAMS_CLIENT_ID=${TEAMS_CLIENT_ID:-}
-      - TEAMS_CLIENT_SECRET=${TEAMS_CLIENT_SECRET:-}
-      - TEAMS_TENANT_ID=${TEAMS_TENANT_ID:-}
-      - TEAMS_ALLOWED_USERS=${TEAMS_ALLOWED_USERS:-}
-      - TEAMS_PORT=${TEAMS_PORT:-3978}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8642/health || exit 1"]
       interval: 30s
