@@ -1,35 +1,41 @@
 #
-# Zora — Hermes Agent (minimal build from source)
+# Vicki — Hermes Agent with MS Teams + Playwright extras
 #
 # Usage:
-#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f deploy/zora-compose.yml up -d --build
+#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f deploy/vicki-compose.yml up -d --build
 #
 # Updates:
 #   git fetch upstream && git merge upstream/main
-#   docker compose -f deploy/zora-compose.yml up -d --build
+#   docker compose -f deploy/vicki-compose.yml up -d --build
 #
 
 services:
-  zora:
+  vicki:
     build:
-      context: ..
-      dockerfile: Dockerfile
-    image: hermes-zora:latest
-    container_name: zora-agent
+      context: .
+      dockerfile: Dockerfile.vicki
+    image: hermes-vicki:latest
+    container_name: vicki-agent
     restart: unless-stopped
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
-      - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
+      - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
-      - API_SERVER_ENABLED=${API_SERVER_ENABLED:-false}
+      - API_SERVER_ENABLED=${API_SERVER_ENABLED:-true}
       - API_SERVER_HOST=${API_SERVER_HOST:-0.0.0.0}
       - API_SERVER_KEY=${API_SERVER_KEY:-}
       - API_SERVER_CORS_ORIGINS=${API_SERVER_CORS_ORIGINS:-*}
       - GATEWAY_ALLOW_ALL_USERS=${GATEWAY_ALLOW_ALL_USERS:-false}
+      # MS Teams — fill in .env or set here
+      - TEAMS_CLIENT_ID=${TEAMS_CLIENT_ID:-}
+      - TEAMS_CLIENT_SECRET=${TEAMS_CLIENT_SECRET:-}
+      - TEAMS_TENANT_ID=${TEAMS_TENANT_ID:-}
+      - TEAMS_ALLOWED_USERS=${TEAMS_ALLOWED_USERS:-}
+      - TEAMS_PORT=${TEAMS_PORT:-3978}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8642/health || exit 1"]
       interval: 30s
@@ -42,19 +48,20 @@ services:
           memory: 8G
           cpus: "4"
     ports:
-      - "${ZORA_API_PORT:-8645}:8642"
+      - "${VICKI_API_PORT:-8642}:8642"
+      - "${VICKI_TEAMS_PORT:-3978}:3978"
 
-  zora-dashboard:
-    image: hermes-zora:latest
-    container_name: zora-dashboard
+  vicki-dashboard:
+    image: hermes-vicki:latest
+    container_name: vicki-dashboard
     restart: unless-stopped
     depends_on:
-      - zora
+      - vicki
     volumes:
-      - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
+      - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
     command: ["dashboard", "--host", "0.0.0.0", "--no-open"]
     ports:
-      - "${ZORA_DASHBOARD_PORT:-9120}:9119"
+      - "${VICKI_DASHBOARD_PORT:-8788}:9119"
