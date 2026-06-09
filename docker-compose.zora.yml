@@ -2,11 +2,11 @@
 # Zora — Hermes Agent (minimal build from source)
 #
 # Usage:
-#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f deploy/zora-compose.yml up -d --build
+#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f docker-compose.zora.yml up -d --build
 #
 # Updates:
 #   git fetch upstream && git merge upstream/main
-#   docker compose -f deploy/zora-compose.yml up -d --build
+#   docker compose -f docker-compose.zora.yml up -d --build
 #
 
 services:
@@ -25,12 +25,13 @@ services:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
+      - HERMES_DASHBOARD=1
+      - HERMES_DASHBOARD_INSECURE=1
       - API_SERVER_ENABLED=${API_SERVER_ENABLED:-false}
       - API_SERVER_HOST=${API_SERVER_HOST:-0.0.0.0}
       - API_SERVER_KEY=${API_SERVER_KEY:-}
       - API_SERVER_CORS_ORIGINS=${API_SERVER_CORS_ORIGINS:-*}
       - GATEWAY_ALLOW_ALL_USERS=${GATEWAY_ALLOW_ALL_USERS:-false}
-      - HERMES_DASHBOARD_INSECURE=1
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8642/health || exit 1"]
       interval: 30s
@@ -44,21 +45,4 @@ services:
           cpus: "4"
     ports:
       - "${ZORA_API_PORT:-8645}:8642"
-
-  zora-dashboard:
-    image: hermes-zora:latest
-    container_name: zora-dashboard
-    restart: unless-stopped
-    depends_on:
-      - zora
-    entrypoint: ["/opt/hermes/.venv/bin/python", "-m", "hermes_cli"]
-    volumes:
-      - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
-    environment:
-      - HERMES_UID=${HERMES_UID:-1000}
-      - HERMES_GID=${HERMES_GID:-1000}
-      - HERMES_HOME=/opt/data
-      - HERMES_DASHBOARD_INSECURE=1
-    command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
-    ports:
       - "${ZORA_DASHBOARD_PORT:-9120}:9119"

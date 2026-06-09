@@ -2,11 +2,11 @@
 # Vicki — Hermes Agent with MS Teams + Playwright extras
 #
 # Usage:
-#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f deploy/vicki-compose.yml up -d --build
+#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f docker-compose.vicki.yml up -d --build
 #
 # Updates:
 #   git fetch upstream && git merge upstream/main
-#   docker compose -f deploy/vicki-compose.yml up -d --build
+#   docker compose -f docker-compose.vicki.yml up -d --build
 #
 
 services:
@@ -25,12 +25,13 @@ services:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
+      - HERMES_DASHBOARD=1
+      - HERMES_DASHBOARD_INSECURE=1
       - API_SERVER_ENABLED=${API_SERVER_ENABLED:-true}
       - API_SERVER_HOST=${API_SERVER_HOST:-0.0.0.0}
       - API_SERVER_KEY=${API_SERVER_KEY:-}
       - API_SERVER_CORS_ORIGINS=${API_SERVER_CORS_ORIGINS:-*}
       - GATEWAY_ALLOW_ALL_USERS=${GATEWAY_ALLOW_ALL_USERS:-false}
-      - HERMES_DASHBOARD_INSECURE=1
       # MS Teams — fill in .env or set here
       - TEAMS_CLIENT_ID=${TEAMS_CLIENT_ID:-}
       - TEAMS_CLIENT_SECRET=${TEAMS_CLIENT_SECRET:-}
@@ -50,22 +51,5 @@ services:
           cpus: "4"
     ports:
       - "${VICKI_API_PORT:-8642}:8642"
-      - "${VICKI_TEAMS_PORT:-3978}:3978"
-
-  vicki-dashboard:
-    image: hermes-vicki:latest
-    container_name: vicki-dashboard
-    restart: unless-stopped
-    depends_on:
-      - vicki
-    entrypoint: ["/opt/hermes/.venv/bin/python", "-m", "hermes_cli"]
-    volumes:
-      - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
-    environment:
-      - HERMES_UID=${HERMES_UID:-1000}
-      - HERMES_GID=${HERMES_GID:-1000}
-      - HERMES_HOME=/opt/data
-      - HERMES_DASHBOARD_INSECURE=1
-    command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
-    ports:
       - "${VICKI_DASHBOARD_PORT:-8788}:9119"
+      - "${VICKI_TEAMS_PORT:-3978}:3978"
