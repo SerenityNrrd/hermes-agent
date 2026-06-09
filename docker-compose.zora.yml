@@ -51,8 +51,12 @@ services:
     depends_on:
       - zora
     entrypoint: ["/opt/hermes/.venv/bin/python", "-m", "hermes_cli"]
+    volumes:
+      - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
     environment:
-      - HERMES_HOME=/tmp/hermes-dashboard
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+      - HERMES_HOME=/opt/data
       - HERMES_DASHBOARD_INSECURE=1
     command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
     ports:
