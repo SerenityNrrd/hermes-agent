@@ -62,7 +62,7 @@ services:
       - HERMES_DASHBOARD_INSECURE=1
     command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
     labels:
-      - "traefik.http.middlewares.zora-basicauth.basicauth.users=nrrdy:$$apr1$$6jDT.PCy$$3M/cxKUobAEJUTMHkm3wr."
+      - "traefik.http.middlewares.zora-basicauth.basicauth.users=nrrdy:$$2y$$12$$FqlspM6wgyd/ooKkvgQjvOt9.95Kw7B.0NdkYmjz5FMV2MP6yG4CW"
       - "coolify.traefik.middlewares=zora-basicauth"
     deploy:
       resources:
