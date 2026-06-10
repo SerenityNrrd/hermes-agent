@@ -61,8 +61,6 @@ services:
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
       - HERMES_DASHBOARD_INSECURE=1
-      - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=nrrdy
-      - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=coder99!
     command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
     deploy:
       resources:
