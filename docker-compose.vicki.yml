@@ -64,6 +64,7 @@ services:
     command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
     labels:
       - "traefik.http.middlewares.vicki-basicauth.basicauth.users=nrrdy:$$apr1$$6jDT.PCy$$3M/cxKUobAEJUTMHkm3wr."
+      - "coolify.traefik.middlewares=vicki-basicauth"
     deploy:
       resources:
         limits:
