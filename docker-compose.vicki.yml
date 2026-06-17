@@ -50,7 +50,7 @@ services:
     container_name: vicki-dashboard
     restart: unless-stopped
     ports:
-      - "8788:9119"
+      - "9121:9119"
     depends_on:
       - vicki
     entrypoint: ["/opt/hermes/.venv/bin/hermes"]
@@ -60,8 +60,7 @@ services:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
-      - HERMES_DASHBOARD_INSECURE=1
-    command: ["dashboard", "--host", "0.0.0.0", "--no-open", "--insecure"]
+    command: ["dashboard", "--host", "0.0.0.0", "--no-open"]
     deploy:
       resources:
         limits:
