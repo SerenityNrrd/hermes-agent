@@ -24,6 +24,8 @@ services:
     shm_size: 1g
     volumes:
       - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
+      # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
+      - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
@@ -56,6 +58,8 @@ services:
     entrypoint: ["/opt/hermes/.venv/bin/hermes"]
     volumes:
       - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
+      # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
+      - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
