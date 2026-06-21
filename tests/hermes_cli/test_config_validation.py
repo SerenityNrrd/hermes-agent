@@ -205,3 +205,33 @@ class TestConfigIssueDataclass:
         a = ConfigIssue("error", "msg", "hint")
         b = ConfigIssue("error", "msg", "hint")
         assert a == b
+
+
+class TestModelSamplingParams:
+    """Sampling params under model: are ignored — warn so the footgun is visible."""
+
+    def test_model_temperature_is_flagged(self):
+        issues = validate_config_structure({
+            "model": {
+                "provider": "LM Studio - Code",
+                "default": "qwen3.6-35b-a3b-mtp",
+                "temperature": 0.7,
+                "top_p": 0.9,
+            },
+            "providers": {"LM Studio - Code": {"base_url": "http://127.0.0.1:1234/v1"}},
+        })
+        warnings = [i for i in issues if i.severity == "warning"]
+        sampling = [i for i in warnings if "sampling params" in i.message]
+        assert sampling, "model.temperature should raise a sampling-params warning"
+        msg = sampling[0].message
+        assert "temperature" in msg and "top_p" in msg
+        # The hint points at the active provider entry with the real values.
+        assert "LM Studio - Code" in sampling[0].hint
+        assert "temperature: 0.7" in sampling[0].hint
+
+    def test_no_sampling_keys_no_warning(self):
+        issues = validate_config_structure({
+            "model": {"provider": "LM Studio - Code", "default": "qwen"},
+            "providers": {"LM Studio - Code": {"base_url": "http://127.0.0.1:1234/v1"}},
+        })
+        assert not [i for i in issues if "sampling params" in i.message]

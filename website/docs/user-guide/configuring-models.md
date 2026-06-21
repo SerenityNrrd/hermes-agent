@@ -145,6 +145,63 @@ auxiliary:
 
 When `fallback_chain` is absent, `auto` uses the top-level `fallback_providers` chain before the built-in auxiliary discovery chain.
 
+## Sampling parameters & per-task profiles (local models)
+
+Hosted frontier models are tuned by the provider, so Hermes leaves their sampling
+defaults alone. Local and small models (e.g. **Qwen3** via LM Studio / Ollama / vLLM)
+benefit from per-task tuning — a low temperature for coding and fact-checking, a higher
+one for creative writing.
+
+Set sampling params **on the provider entry**. You can write them as flat keys or nest
+them under `extra_body`; both are forwarded verbatim in the request body. Recognized flat
+keys: `temperature`, `top_p`, `top_k`, `min_p`, `presence_penalty`, `frequency_penalty`,
+`repetition_penalty`, `repeat_penalty`, `seed`. Anything else goes in `extra_body`.
+
+```yaml
+providers:
+  "LM Studio - Think":
+    base_url: http://127.0.0.1:1234/v1
+    model: qwen3.6-35b-a3b-mtp
+    temperature: 1.0
+    top_p: 0.95
+    top_k: 20
+    min_p: 0.0
+    presence_penalty: 1.5
+    repetition_penalty: 1.0
+  "LM Studio - Code":
+    base_url: http://127.0.0.1:1234/v1
+    model: qwen3.6-35b-a3b-mtp
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    presence_penalty: 0.0
+```
+
+Each provider entry is a **profile**: a model plus its sampling params. Point your main
+model at one with `model.provider`, and switch between them mid-session:
+
+```
+/profile list            # show profiles and the active one
+/profile "LM Studio - Code"
+```
+
+Optionally alias profiles to short task names with a top-level `profiles:` map:
+
+```yaml
+profiles:
+  think: "LM Studio - Think"
+  code: "LM Studio - Code"
+```
+```
+/profile code
+```
+
+:::caution `model.temperature` is ignored
+Sampling params placed under the `model:` section are **not** read — they must live on the
+provider entry to reach the model. `hermes doctor` / startup will warn if it finds them
+misplaced.
+:::
+
 ## When does it take effect?
 
 - **CLI** (`hermes chat`): next `hermes chat` invocation.

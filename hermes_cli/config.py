@@ -3974,6 +3974,25 @@ def get_missing_skill_config_vars() -> List[Dict[str, Any]]:
     return missing
 
 
+# Flat sampling-parameter keys accepted directly on a ``providers.<name>``
+# entry (per-profile tuning of local / OpenAI-compatible models). Kept in sync
+# with ``runtime_provider.SAMPLING_PARAM_KEYS`` — duplicated here to avoid a
+# circular import (runtime_provider imports config, not the reverse).
+_SAMPLING_PARAM_KEYS = frozenset(
+    {
+        "temperature",
+        "top_p",
+        "top_k",
+        "min_p",
+        "presence_penalty",
+        "frequency_penalty",
+        "repetition_penalty",
+        "repeat_penalty",
+        "seed",
+    }
+)
+
+
 def _normalize_custom_provider_entry(
     entry: Any,
     *,
@@ -4005,7 +4024,7 @@ def _normalize_custom_provider_entry(
         "context_length", "rate_limit_delay",
         "request_timeout_seconds", "stale_timeout_seconds",
         "discover_models", "extra_body",
-    }
+    } | _SAMPLING_PARAM_KEYS
     for camel, snake in _CAMEL_ALIASES.items():
         if camel in entry and snake not in entry:
             logger.warning(
@@ -4103,6 +4122,14 @@ def _normalize_custom_provider_entry(
     if isinstance(extra_body, dict):
         normalized["extra_body"] = dict(extra_body)
 
+    # Flat per-profile sampling params (temperature, top_p, …). Preserved as
+    # first-class keys so they survive normalization; runtime_provider folds
+    # them into the forwarded request body. See SAMPLING_PARAM_KEYS there.
+    for _sk in _SAMPLING_PARAM_KEYS:
+        _sv = entry.get(_sk)
+        if _sv is not None:
+            normalized[_sk] = _sv
+
     return normalized
 
 
@@ -4130,6 +4157,7 @@ def _custom_provider_entry_to_provider_config(
         "rate_limit_delay",
         "discover_models",
         "extra_body",
+        *sorted(_SAMPLING_PARAM_KEYS),
     ):
         if field in normalized:
             provider_entry[field] = normalized[field]
@@ -4478,6 +4506,26 @@ def validate_config_structure(config: Optional[Dict[str, Any]] = None) -> List["
             "    default: your-model-name\n"
             "    base_url: https://...",
         ))
+
+    # ── Sampling params under model: are silently ignored ────────────────
+    # Nothing reads model.temperature / model.top_p / … — sampling params must
+    # live on the active provider entry (flat keys or extra_body) to reach the
+    # model. Surfacing this kills a real footgun (temperature looked set but was
+    # dropped). See _SAMPLING_PARAM_KEYS / runtime_provider.SAMPLING_PARAM_KEYS.
+    if isinstance(model_cfg, dict):
+        misplaced_sampling = sorted(_SAMPLING_PARAM_KEYS & set(model_cfg.keys()))
+        if misplaced_sampling:
+            _active = str(model_cfg.get("provider") or "your provider").strip() or "your provider"
+            issues.append(ConfigIssue(
+                "warning",
+                f"model.{{{', '.join(misplaced_sampling)}}} is ignored — sampling params "
+                f"under 'model:' never reach the model",
+                "Move them onto the active provider entry so they are sent, e.g.:\n"
+                f"  providers:\n"
+                f"    \"{_active}\":\n"
+                f"      base_url: http://127.0.0.1:1234/v1\n"
+                + "".join(f"      {k}: {model_cfg[k]}\n" for k in misplaced_sampling),
+            ))
 
     # ── Root-level keys that look misplaced ──────────────────────────────
     for key in config:

@@ -505,6 +505,38 @@ def _lift_max_output_tokens(entry: Dict[str, Any], result: Dict[str, Any]) -> No
             return
 
 
+# Sampling parameters accepted as flat keys directly on a ``providers.<name>``
+# entry, in addition to nesting them under ``extra_body``. They are forwarded
+# verbatim in the request body — the canonical channel for per-profile tuning
+# of local / OpenAI-compatible models (e.g. LM Studio + Qwen, where each task
+# type wants its own temperature/top_p/etc.). ``extra_body`` remains the escape
+# hatch for any field not in this set.
+SAMPLING_PARAM_KEYS = frozenset(
+    {
+        "temperature",
+        "top_p",
+        "top_k",
+        "min_p",
+        "presence_penalty",
+        "frequency_penalty",
+        "repetition_penalty",
+        "repeat_penalty",
+        "seed",
+    }
+)
+
+
+def _apply_sampling_keys(entry: Dict[str, Any], result: Dict[str, Any]) -> None:
+    """Propagate recognized flat sampling keys from a provider entry onto the
+    resolved runtime dict so ``_custom_provider_request_overrides`` can fold
+    them into the forwarded request body. Mirrors ``_lift_max_output_tokens``.
+    """
+    for _k in SAMPLING_PARAM_KEYS:
+        _v = entry.get(_k)
+        if _v is not None:
+            result[_k] = _v
+
+
 def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, Any]]:
     requested_norm = _normalize_custom_provider_name(requested_provider or "")
     if not requested_norm:
@@ -585,6 +617,7 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
                     if api_mode:
                         result["api_mode"] = api_mode
                     _lift_max_output_tokens(entry, result)
+                    _apply_sampling_keys(entry, result)
                     return result
             # Also check the 'name' field if present
             display_name = entry.get("name", "")
@@ -607,6 +640,7 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
                         if api_mode:
                             result["api_mode"] = api_mode
                         _lift_max_output_tokens(entry, result)
+                        _apply_sampling_keys(entry, result)
                         return result
 
     # Fall back to custom_providers: list (legacy format)
@@ -657,6 +691,7 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
         if model_name:
             result["model"] = model_name
         _lift_max_output_tokens(entry, result)
+        _apply_sampling_keys(entry, result)
         return result
 
     return None
@@ -794,11 +829,61 @@ def _normalize_base_url_for_match(value) -> str:
     return str(value or "").strip().rstrip("/").lower()
 
 
+def _sampling_overrides_from_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge a provider entry's sampling params into a single extra_body dict.
+
+    Combines the nested ``extra_body`` block (base) with any recognized flat
+    sampling keys present at the entry's top level (overlay). Flat keys win so a
+    headline param written directly on the profile (``temperature: 0.6``) takes
+    precedence over a stale value buried in ``extra_body``. Returns ``{}`` when
+    the entry declares no sampling params.
+    """
+    merged: Dict[str, Any] = {}
+    extra_body = entry.get("extra_body")
+    if isinstance(extra_body, dict):
+        merged.update(extra_body)
+    for key in SAMPLING_PARAM_KEYS:
+        val = entry.get(key)
+        if val is not None:
+            merged[key] = val
+    return merged
+
+
 def _custom_provider_request_overrides(custom_provider: Dict[str, Any]) -> Dict[str, Any]:
-    extra_body = custom_provider.get("extra_body")
-    if not isinstance(extra_body, dict) or not extra_body:
+    sampling = _sampling_overrides_from_entry(custom_provider)
+    if not sampling:
         return {}
-    return {"extra_body": dict(extra_body)}
+    return {"extra_body": sampling}
+
+
+def sampling_request_overrides_for(
+    provider_name: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Resolve request_overrides (sampling params) for a configured provider entry.
+
+    Matches a ``providers:`` / ``custom_providers:`` entry by name first, then by
+    ``base_url``, and returns ``{"extra_body": {...}}`` carrying its sampling
+    params, or ``{}`` when no entry matches or it declares none. Used by
+    ``switch_model`` to re-apply a profile's sampling params on a mid-session
+    provider switch.
+    """
+    entry = None
+    if provider_name:
+        try:
+            entry = _get_named_custom_provider(provider_name)
+        except Exception:
+            entry = None
+    if entry is None and base_url:
+        try:
+            identity = find_custom_provider_identity(base_url)
+            if identity:
+                entry = _get_named_custom_provider(identity)
+        except Exception:
+            entry = None
+    if not entry:
+        return {}
+    return _custom_provider_request_overrides(entry)
 
 
 def _resolve_named_custom_runtime(

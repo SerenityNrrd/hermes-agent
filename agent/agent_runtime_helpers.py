@@ -1616,6 +1616,26 @@ def switch_model(agent, new_model, new_provider, api_key='', base_url='', api_mo
     # ── LM Studio: preload before probing context length ──
     agent._ensure_lmstudio_runtime_loaded()
 
+    # ── Refresh per-profile sampling overrides for the new provider ──
+    # Provider entries (e.g. LM Studio task profiles) carry sampling params
+    # (temperature/top_p/top_k/…) that reach the model via request_overrides.
+    # Re-resolve them for the NEW provider so a mid-session switch actually
+    # changes sampling behavior — mirrors agent init, where request_overrides
+    # are seeded from the resolved runtime provider. Match by name first, then
+    # by the freshly-set base_url. Preserve any non-sampling overrides and swap
+    # only the extra_body block (cleared when the new provider declares none).
+    try:
+        from hermes_cli.runtime_provider import sampling_request_overrides_for
+        _new_sampling = sampling_request_overrides_for(
+            provider_name=new_provider, base_url=agent.base_url
+        )
+        _ro = dict(getattr(agent, "request_overrides", {}) or {})
+        _ro.pop("extra_body", None)
+        _ro.update(_new_sampling)  # {} when the new provider has no sampling params
+        agent.request_overrides = _ro
+    except Exception as _ro_exc:  # noqa: BLE001
+        logger.debug("switch_model: sampling override refresh skipped: %s", _ro_exc)
+
     # ── Update context compressor ──
     if hasattr(agent, "context_compressor") and agent.context_compressor:
         from agent.model_metadata import get_model_context_length

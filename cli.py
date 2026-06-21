@@ -7286,6 +7286,82 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         else:
             _cprint("    (session only — add --global to persist)")
 
+    def _handle_profile_command(self, cmd_original: str):
+        """Handle /profile — switch the active sampling profile.
+
+        A profile is a ``providers.<name>`` entry carrying its own sampling
+        params (temperature/top_p/top_k/…). An optional top-level ``profiles:``
+        map aliases a friendly task name to a provider entry, e.g.
+        ``profiles: {code: "LM Studio - Code"}``.
+
+          /profile            — list profiles + show the active one
+          /profile list       — same
+          /profile <name>     — switch to that profile (provider entry or alias)
+
+        Switching routes through /model's provider-switch path (so credentials,
+        context length, and the sampling-override refresh in switch_model all
+        run). Provider names with spaces are passed as their normalized slug so
+        flag parsing stays single-token.
+        """
+        from hermes_cli.config import load_config
+        from hermes_cli.runtime_provider import (
+            SAMPLING_PARAM_KEYS,
+            _normalize_custom_provider_name,
+        )
+
+        parts = cmd_original.split(None, 1)
+        arg = parts[1].strip() if len(parts) > 1 else ""
+
+        try:
+            cfg = load_config()
+        except Exception as e:  # noqa: BLE001
+            _cprint(f"  ✗ Could not load config: {e}")
+            return
+
+        providers = cfg.get("providers")
+        providers = providers if isinstance(providers, dict) else {}
+        aliases = cfg.get("profiles")
+        aliases = aliases if isinstance(aliases, dict) else {}
+
+        def _sampling_of(entry: dict) -> dict:
+            eb = entry.get("extra_body")
+            merged = dict(eb) if isinstance(eb, dict) else {}
+            for k in SAMPLING_PARAM_KEYS:
+                if entry.get(k) is not None:
+                    merged[k] = entry[k]
+            return merged
+
+        # ── List mode ──
+        if not arg or arg.lower() == "list":
+            if not providers and not aliases:
+                _cprint("  No sampling profiles configured.")
+                _cprint("  Add provider entries under `providers:` in config.yaml, each with its")
+                _cprint("  own sampling params (temperature/top_p/…), then run `/profile <name>`.")
+                return
+            _cprint("  Sampling profiles:")
+            active_norm = _normalize_custom_provider_name(self.provider or "")
+            for fname, pname in aliases.items():
+                _cprint(f"    {fname}  →  {pname}")
+            for pname, entry in providers.items():
+                if not isinstance(entry, dict):
+                    continue
+                sampling = _sampling_of(entry)
+                mark = " (active)" if _normalize_custom_provider_name(str(pname)) == active_norm else ""
+                _cprint(f"    {pname}{mark}  {sampling or '(no sampling params)'}")
+            return
+
+        # ── Switch mode: resolve alias → provider, then route via /model ──
+        target = arg
+        for fname, pname in aliases.items():
+            if str(fname).strip().lower() == arg.strip().lower():
+                target = str(pname)
+                break
+        slug = _normalize_custom_provider_name(target)
+        if not slug:
+            _cprint(f"  ✗ Unknown profile: {arg!r}. Run `/profile list`.")
+            return
+        self._handle_model_switch(f"/profile --provider {slug}")
+
     def _handle_codex_runtime(self, cmd_original: str) -> None:
         """Handle /codex-runtime — toggle the codex app-server runtime opt-in.
 
@@ -7651,6 +7727,8 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             self._handle_sessions_command(cmd_original)
         elif canonical == "model":
             self._handle_model_switch(cmd_original)
+        elif canonical == "profile":
+            self._handle_profile_command(cmd_original)
         elif canonical == "codex-runtime":
             self._handle_codex_runtime(cmd_original)
         elif canonical == "gquota":

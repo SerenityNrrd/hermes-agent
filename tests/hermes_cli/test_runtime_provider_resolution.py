@@ -1732,6 +1732,69 @@ def test_named_custom_runtime_propagates_extra_body_direct_path(monkeypatch):
     }
 
 
+def test_flat_sampling_keys_become_request_overrides(monkeypatch):
+    """Flat sampling params on a provider entry are folded into extra_body."""
+    monkeypatch.setattr(rp, "resolve_provider", lambda *a, **k: "lm-studio-code")
+    monkeypatch.setattr(
+        rp, "_get_named_custom_provider",
+        lambda p: {
+            "name": "LM Studio - Code",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "model": "qwen3.6-35b-a3b-mtp",
+            "temperature": 0.6,
+            "top_k": 20,
+            "extra_body": {"min_p": 0.0},
+        },
+    )
+    monkeypatch.setattr(rp, "_try_resolve_from_custom_pool", lambda *a, **k: None)
+
+    resolved = rp.resolve_runtime_provider(requested="LM Studio - Code")
+    assert resolved["request_overrides"] == {
+        "extra_body": {"min_p": 0.0, "top_k": 20, "temperature": 0.6}
+    }
+
+
+def test_flat_sampling_key_overrides_extra_body_value(monkeypatch):
+    """A flat headline param wins over the same key buried in extra_body."""
+    entry = {
+        "name": "p",
+        "base_url": "http://h/v1",
+        "temperature": 0.6,
+        "extra_body": {"temperature": 1.0, "top_p": 0.9},
+    }
+    assert rp._custom_provider_request_overrides(entry) == {
+        "extra_body": {"temperature": 0.6, "top_p": 0.9}
+    }
+
+
+def test_sampling_request_overrides_for_matches_by_name_and_base_url(monkeypatch):
+    """The switch_model helper resolves a profile's sampling params by either key."""
+    entry = {
+        "name": "LM Studio - Creative",
+        "base_url": "http://127.0.0.1:1234/v1",
+        "temperature": 1.0,
+        "top_k": 40,
+    }
+    monkeypatch.setattr(
+        rp, "_get_named_custom_provider",
+        lambda p: entry if p in {"LM Studio - Creative", "custom:lm-studio---creative"} else None,
+    )
+    monkeypatch.setattr(
+        rp, "find_custom_provider_identity",
+        lambda url: "custom:lm-studio---creative" if "1234" in (url or "") else None,
+    )
+
+    by_name = rp.sampling_request_overrides_for(provider_name="LM Studio - Creative")
+    by_url = rp.sampling_request_overrides_for(base_url="http://127.0.0.1:1234/v1/")
+    assert by_name == {"extra_body": {"temperature": 1.0, "top_k": 40}}
+    assert by_url == by_name
+
+    # Unknown provider with no matching entry → empty (clears stale overrides).
+    monkeypatch.setattr(rp, "_get_named_custom_provider", lambda p: None)
+    monkeypatch.setattr(rp, "find_custom_provider_identity", lambda url: None)
+    assert rp.sampling_request_overrides_for(provider_name="openrouter") == {}
+
+
 def test_named_custom_runtime_propagates_model_pool_path(monkeypatch):
     """Model should propagate even when credential pool handles credentials."""
     monkeypatch.setattr(rp, "resolve_provider", lambda *a, **k: "my-server")
