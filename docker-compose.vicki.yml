@@ -26,6 +26,8 @@ services:
       - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
       # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
       - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
+      # amlegal database — legal data dir mounted at /opt/amlegal (amlegal.db lives here)
+      - ${AMLEGAL_DATA:-/home/angrynrrd/zora/data}:/opt/amlegal
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
@@ -60,6 +62,8 @@ services:
       - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
       # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
       - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
+      # amlegal database — legal data dir mounted at /opt/amlegal (amlegal.db lives here)
+      - ${AMLEGAL_DATA:-/home/angrynrrd/zora/data}:/opt/amlegal
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
