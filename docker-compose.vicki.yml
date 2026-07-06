@@ -55,7 +55,6 @@ services:
       - "9121:9119"
     depends_on:
       - vicki
-    entrypoint: ["/opt/hermes/.venv/bin/hermes"]
     volumes:
       - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
       # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
