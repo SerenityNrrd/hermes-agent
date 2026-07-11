@@ -1,28 +1,28 @@
 #
-# Zora — Hermes Agent (minimal build from source)
+# Portal — Hermes Agent (minimal build from source)
 #
 # Usage:
-#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f docker-compose.zora.yml up -d --build
+#   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f docker-compose.portal.yml up -d --build
 #
 # Updates:
 #   git fetch upstream && git merge upstream/main
-#   docker compose -f docker-compose.zora.yml up -d --build
+#   docker compose -f docker-compose.portal.yml up -d --build
 #
 
 services:
-  zora:
+  portal:
     build:
       context: .
       dockerfile: Dockerfile
-    image: hermes-zora:latest
-    container_name: zora-agent
+    image: hermes-portal:latest
+    container_name: portal-agent
     restart: unless-stopped
     ports:
-      - "${ZORA_API_PORT:-8645}:8642"
+      - "${PORTAL_API_PORT:-8647}:8642"
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
-      - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
+      - ${PORTAL_DATA:-/home/angrynrrd/portal}:/opt/data
       # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
       - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
     environment:
@@ -46,16 +46,16 @@ services:
           memory: 8G
           cpus: "4"
 
-  zora-dashboard:
-    image: hermes-zora:latest
-    container_name: zora-dashboard
+  portal-dashboard:
+    image: hermes-portal:latest
+    container_name: portal-dashboard
     restart: unless-stopped
     ports:
-      - "9120:9119"
+      - "9122:9119"
     depends_on:
-      - zora
+      - portal
     volumes:
-      - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
+      - ${PORTAL_DATA:-/home/angrynrrd/portal}:/opt/data
       # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
       - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
     environment:
