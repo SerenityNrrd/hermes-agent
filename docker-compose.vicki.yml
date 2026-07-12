@@ -1,25 +1,21 @@
 #
-# Vicki — Hermes Agent with MS Teams + Playwright extras
+# Vicki — Hermes Agent (gateway + dashboard in one container)
 #
 # Usage:
 #   HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose -f docker-compose.vicki.yml up -d --build
-#
-# Updates:
-#   git fetch upstream && git merge upstream/main
-#   docker compose -f docker-compose.vicki.yml up -d --build
 #
 
 services:
   vicki:
     build:
       context: .
-      dockerfile: Dockerfile.vicki
+      dockerfile: Dockerfile
     image: hermes-vicki:latest
-    container_name: vicki-agent
+    container_name: vicki
     restart: unless-stopped
     ports:
       - "8646:8642"
-      - "3978:3978"
+      - "9121:9119"
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
@@ -30,6 +26,7 @@ services:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
+      - HERMES_DASHBOARD=1
       - API_SERVER_ENABLED=${API_SERVER_ENABLED:-true}
       - API_SERVER_HOST=${API_SERVER_HOST:-0.0.0.0}
       - API_SERVER_KEY=${API_SERVER_KEY:-}
@@ -46,26 +43,3 @@ services:
         limits:
           memory: 8G
           cpus: "4"
-
-  vicki-dashboard:
-    image: hermes-vicki:latest
-    container_name: vicki-dashboard
-    restart: unless-stopped
-    ports:
-      - "9121:9119"
-    depends_on:
-      - vicki
-    volumes:
-      - ${VICKI_DATA:-/home/angrynrrd/hermes}:/opt/data
-      # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
-      - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
-    environment:
-      - HERMES_UID=${HERMES_UID:-1000}
-      - HERMES_GID=${HERMES_GID:-1000}
-      - HERMES_HOME=/opt/data
-    command: ["dashboard", "--host", "0.0.0.0", "--no-open"]
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "1"
