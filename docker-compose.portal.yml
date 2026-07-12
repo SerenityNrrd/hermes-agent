@@ -13,9 +13,6 @@ services:
     image: hermes-portal:latest
     container_name: portal
     restart: unless-stopped
-    ports:
-      - "8647:8642"
-      - "9122:9119"
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
