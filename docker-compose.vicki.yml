@@ -13,10 +13,10 @@ services:
     image: hermes-vicki:latest
     container_name: vicki
     restart: unless-stopped
-    ports:
-      - "8646:8642"
-      - "9121:9119"
-      - "3978:3978"
+    # ports:
+      # - "8646:8642"
+      # - "9121:9119"
+      # - "3978:3978"
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
