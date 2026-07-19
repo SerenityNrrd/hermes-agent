@@ -16,9 +16,9 @@ services:
     command: ["gateway", "run"]
     shm_size: 1g
     volumes:
-      - ${ZORA_DATA:-/home/hermes/data}:/opt/data
+      - ${ZORA_DATA:-/home/angrynrrd/zoraToo}:/opt/data
       # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
-      - ${OBSIDIAN_VAULT:-/home/hermes/vault}:/opt/vault
+      - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
