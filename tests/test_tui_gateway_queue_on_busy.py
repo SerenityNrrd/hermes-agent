@@ -60,11 +60,15 @@ def test_busy_interrupt_mode_redirects_active_turn(monkeypatch):
         ),
     )
     session = _session(agent=agent, running=True)
+    session["inflight_turn"] = {"user": "original request", "assistant": "partial reply"}
 
     resp = server._handle_busy_submit("r1", "sid", session, "redirect", "ws-1")
 
     assert resp["result"]["status"] == "redirected"
     assert seen == ["redirect"]
+    # Appended, not overwritten: the original prompt must stay recoverable.
+    assert session["inflight_turn"]["user"] == "original request"
+    assert session["inflight_turn"]["corrections"] == ["redirect"]
     assert session.get("queued_prompt") is None
 
 
