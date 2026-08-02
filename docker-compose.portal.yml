@@ -19,11 +19,15 @@ services:
       - ${PORTAL_DATA:-/home/angrynrrd/portal}:/opt/data
       # Obsidian vault — shared notes at /opt/vault (rw; append :ro to make read-only)
       - ${OBSIDIAN_VAULT:-/home/angrynrrd/Nextcloud/Shady/files}:/opt/vault
+      # LLM Wiki — private instance wiki + shared cross-instance wiki
+      - /home/angrynrrd/llm_wiki/portal_wiki:/opt/wiki
+      - /home/angrynrrd/llm_wiki/shared_wiki:/opt/wiki/shared
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
       - HERMES_HOME=/opt/data
       - HERMES_DASHBOARD=1
+      - WIKI_PATH=/opt/wiki
       - API_SERVER_ENABLED=${API_SERVER_ENABLED:-false}
       - API_SERVER_HOST=${API_SERVER_HOST:-0.0.0.0}
       - API_SERVER_KEY=${API_SERVER_KEY:-}
