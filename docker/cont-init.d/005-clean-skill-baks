@@ -1,0 +1,12 @@
+#!/command/with-contenv sh
+# Clear stale skill-update backups so the bundled-skills sync can run.
+#
+# The sync backs up a skill to <name>.bak before replacing it and fails with
+# Errno 39 (Directory not empty) when a leftover .bak already exists, leaving
+# that skill frozen on its old version. .bak dirs are transient update
+# backups, so clearing them at boot — before 01-hermes-setup runs the sync —
+# lets the update proceed; the sync recreates fresh backups as needed.
+for root in "${HERMES_HOME:-/opt/data}/skills" "${HERMES_HOME:-/opt/data}/.hermes/skills"; do
+    [ -d "$root" ] || continue
+    find "$root" -type d -name '*.bak' -prune -exec rm -rf {} + 2>/dev/null
+done

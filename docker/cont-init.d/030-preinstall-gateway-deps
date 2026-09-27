@@ -1,0 +1,27 @@
+#!/command/with-contenv sh
+# Make sure the gateway process can import aiohttp at boot.
+#
+# The api_server (and webhook/msgraph) adapters probe with a plain
+# `from aiohttp import web` in the gateway process BEFORE any PM dependency
+# generation for the platform can be ensured — so when the base runtime env
+# lacks aiohttp, the probe fails, the adapter never starts, and its lazy
+# install never triggers (a deadlock: no retry, no first use). Upstream's
+# answer for hosted/immutable images is to bake the deps; this covers
+# deployments whose runtime env was prepared without them.
+#
+# Runs after 01-hermes-setup (which refreshes the dependency env) and before
+# services start. Idempotent no-op when aiohttp is already importable; never
+# blocks boot.
+PY=/opt/hermes/.venv/bin/python
+[ -x "$PY" ] || exit 0
+if ! "$PY" -c 'import aiohttp' >/dev/null 2>&1; then
+    echo "[preinstall] aiohttp missing from gateway venv — installing"
+    if command -v uv >/dev/null 2>&1; then
+        uv pip install --python "$PY" 'aiohttp==3.14.3' >/dev/null 2>&1 || true
+    elif "$PY" -m pip --version >/dev/null 2>&1; then
+        "$PY" -m pip install --no-cache-dir 'aiohttp==3.14.3' >/dev/null 2>&1 || true
+    else
+        echo "[preinstall] neither uv nor pip available; skipping"
+    fi
+fi
+exit 0
