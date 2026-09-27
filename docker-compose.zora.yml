@@ -22,6 +22,8 @@ services:
       # LLM Wiki — private instance wiki + shared cross-instance wiki
       - /home/angrynrrd/llm_wiki/zora_wiki:/opt/wiki
       - /home/angrynrrd/llm_wiki/shared_wiki:/opt/wiki/shared
+      # website_course — mounted read-only at /opt/website_course
+      - /home/angrynrrd/website_course:/opt/website_course:ro
     environment:
       - HERMES_UID=${HERMES_UID:-1000}
       - HERMES_GID=${HERMES_GID:-1000}
