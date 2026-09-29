@@ -137,19 +137,21 @@ def _import_sdk_names(module: str, names: tuple, missing_msg: Optional[str] = No
 
 
 def _ensure_mcp_sdk() -> bool:
-    """Import the optional ``mcp`` SDK on first use; return availability. Idempotent and
-    thread-safe; honors a test-patched ``_MCP_AVAILABLE=False`` (no import) and pre-installed
-    mocks (``ClientSession`` already set means no re-import)."""
+    """Import the optional ``mcp`` SDK on first use; return availability. Thread-safe;
+    honors a test-patched ``_MCP_AVAILABLE=False`` (no import) and pre-installed mocks
+    (``ClientSession`` already set means no re-import). A probe that fails (SDK absent,
+    or a boot raced another thread's import) does NOT latch: the next call re-probes —
+    successful imports are cached by ``sys.modules``, so retries are cheap."""
     global _MCP_SDK_IMPORT_ATTEMPTED, _MCP_AVAILABLE, _MCP_HTTP_AVAILABLE, _MCP_NEW_HTTP, _MCP_LEGACY_HTTP
     global _MCP_SAMPLING_TYPES, _MCP_NOTIFICATION_TYPES, _MCP_ELICITATION_TYPES, sse_client
     global _MCP_MESSAGE_HANDLER_SUPPORTED, _MCP_LOGGING_CALLBACK_SUPPORTED, LATEST_HANDSHAKE_VERSION
     global _JSONRPC_METHOD_NOT_FOUND
     if not _MCP_AVAILABLE:
         return False
-    if _MCP_SDK_IMPORT_ATTEMPTED or ClientSession is not None:
+    if _MCP_SDK_IMPORT_ATTEMPTED or (ClientSession is not None and _MCP_HTTP_AVAILABLE):
         return _MCP_AVAILABLE
     with _MCP_SDK_IMPORT_LOCK:
-        if _MCP_SDK_IMPORT_ATTEMPTED or ClientSession is not None:
+        if _MCP_SDK_IMPORT_ATTEMPTED or (ClientSession is not None and _MCP_HTTP_AVAILABLE):
             return _MCP_AVAILABLE
         if (_import_sdk_names("mcp", ("ClientSession", "StdioServerParameters"))
                 and _import_sdk_names("mcp.client.stdio", ("stdio_client",))):
@@ -180,7 +182,12 @@ def _ensure_mcp_sdk() -> bool:
         if _MCP_AVAILABLE and not _MCP_MESSAGE_HANDLER_SUPPORTED:
             logger.debug("MCP SDK does not support message_handler -- dynamic tool discovery disabled")
         _MCP_LOGGING_CALLBACK_SUPPORTED = _client_session_accepts("logging_callback")
-        _MCP_SDK_IMPORT_ATTEMPTED = True
+        # Latch only a fully successful probe. A probe that ran while the process was
+        # still bringing itself up (multiplex gateway booting many profiles at once)
+        # can see an import that is not ready yet; freezing that verdict parked every
+        # HTTP MCP server for the process lifetime behind a misleading "upgrade the
+        # mcp package" error. A failed probe re-runs on the next call.
+        _MCP_SDK_IMPORT_ATTEMPTED = _MCP_AVAILABLE and _MCP_HTTP_AVAILABLE
         return _MCP_AVAILABLE
 
 
