@@ -147,7 +147,16 @@ def _ensure_mcp_sdk() -> bool:
     global _MCP_MESSAGE_HANDLER_SUPPORTED, _MCP_LOGGING_CALLBACK_SUPPORTED, LATEST_HANDSHAKE_VERSION
     global _JSONRPC_METHOD_NOT_FOUND
     if not _MCP_AVAILABLE:
-        return False
+        # The module-level find_spec can lose a boot race (gateway importing while the
+        # interpreter's import machinery is mid-setup); re-check instead of trusting the
+        # frozen False forever. Cheap: find_spec is a path scan, and once it passes the
+        # success branch below sets _MCP_AVAILABLE for good.
+        try:
+            _MCP_AVAILABLE = importlib.util.find_spec("mcp") is not None
+        except Exception:
+            _MCP_AVAILABLE = False
+        if not _MCP_AVAILABLE:
+            return False
     if _MCP_SDK_IMPORT_ATTEMPTED or (ClientSession is not None and _MCP_HTTP_AVAILABLE):
         return _MCP_AVAILABLE
     with _MCP_SDK_IMPORT_LOCK:

@@ -73,6 +73,28 @@ def test_core_probe_failure_does_not_latch(monkeypatch, probe_state):
     assert mt._MCP_HTTP_AVAILABLE and mt._MCP_SDK_IMPORT_ATTEMPTED
 
 
+def test_frozen_unavailable_flag_rechecks(monkeypatch, probe_state):
+    """A module-level find_spec that lost the boot race must not veto forever."""
+    import importlib.util
+
+    mt._MCP_AVAILABLE = False  # frozen False from import time
+    real_find_spec = importlib.util.find_spec
+    calls = {"n": 0}
+
+    def flaky_find_spec(name, *a, **kw):
+        if name != "mcp":
+            return real_find_spec(name, *a, **kw)
+        calls["n"] += 1
+        return None if calls["n"] == 1 else True
+
+    monkeypatch.setattr(importlib.util, "find_spec", flaky_find_spec)
+    monkeypatch.setattr(mt, "_import_sdk_names", _importer({}))
+    assert mt._ensure_mcp_sdk() is False  # first call: still marked unavailable
+    assert mt._MCP_AVAILABLE is False
+    assert mt._ensure_mcp_sdk() is True  # second call re-checked and recovered
+    assert mt._MCP_AVAILABLE and mt.ClientSession is not None
+
+
 def test_successful_probe_latches_and_no_ops(monkeypatch, probe_state):
     """A fully successful probe keeps the no-op-once-attempted contract."""
     monkeypatch.setattr(mt, "_import_sdk_names", _importer({}))
